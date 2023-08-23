@@ -1,3 +1,5 @@
+let readBtn = document.querySelector('button');
+let audio;
 let inputHTML = document.querySelector('input');
 let outputHTML = document.querySelector('p');
 let ones = ['', 'یەک', 'دوو', 'سێ', 'چوار', 'پێنج', 'شەش', 'حەوت', 'هەشت', 'نۆ'];
@@ -8,6 +10,66 @@ inputHTML.addEventListener('input', () => {
     outputHTML.innerHTML = "ئەنجام: " + convertToWords(inputHTML.value);
 });
 
+function playAudio(number) {
+    audio = new Audio(`audio/${number}.m4a`);
+    audio.play();
+}
+readBtn.addEventListener('click', ()=> {
+    let number = inputHTML.value;
+    readHundreds(number);
+    function readTens(number) {
+        if (number < 20) { 
+            playAudio(number);
+        } 
+        else if(number > 19) {
+            if(number % 10 != 0) {
+                playAudio(Math.floor(number / 10) * 10);
+                audio.addEventListener('ended', ()=> {
+                    playAudio('و');
+                    audio.addEventListener('ended', ()=> {
+                        playAudio(number % 10);
+                    })
+                })
+            } else {
+                playAudio(number)   
+            }
+        }
+        else {
+            readHundreds(number);
+        }
+    }
+     function readHundreds(number) {
+        if(number > 99) {
+            if(number <= 199) {
+                playAudio(100);
+                audio.addEventListener('ended', ()=> {
+                    if(number % 100 != 0) {
+                        playAudio('و');
+                        audio.addEventListener('ended', () => {
+                            readTens(number % 100);
+                        })
+                    }
+                })
+            }
+            else {
+                playAudio(Math.floor(number / 100));
+                audio.addEventListener('ended', ()=> {
+                    playAudio(100);
+                    audio.addEventListener('ended', ()=> {
+                        if(number % 100 != 0) {
+                            playAudio('و');
+                            audio.addEventListener('ended', () => {
+                                readTens(number % 100);
+                            })
+                        }
+                    })
+                })
+            }    
+        } else {
+            readTens(number);
+        }
+     }
+});
 
 function convertToWords(number) {
     if(number == 0)
