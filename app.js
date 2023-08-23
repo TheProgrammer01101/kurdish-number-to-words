@@ -104,7 +104,7 @@ function convertToWords(number) {
     function converThousands(number) {
         if(number > 999)
             if(number < 2000)
-                return 'هەزار' + (number % 1000 == 0 ? '' : ' و ') + convertTens(number % 1000);
+                return 'هەزار' + (number % 1000 == 0 ? '' : ' و ') + converHundreds(number % 1000);
             else
                 return converHundreds(Math.floor(number / 1000)) + ' هەزار ' + (number % 1000 == 0 ? '' : ' و ') + converHundreds((number % 1000));
         else 
