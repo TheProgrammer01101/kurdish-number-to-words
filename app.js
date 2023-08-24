@@ -2,45 +2,68 @@ let readBtn = document.querySelector('button');
 let audio;
 let inputHTML = document.querySelector('input');
 let outputHTML = document.querySelector('p');
-let ones = ['', 'یەک', 'دوو', 'سێ', 'چوار', 'پێنج', 'شەش', 'حەوت', 'هەشت', 'نۆ'];
-let teens = ['دە', 'یانزە', 'دوانزە', 'سیانزە' ,'چواردە' ,'پانزە' ,'شانزە', 'حەڤە', 'هەژدە', 'نۆزدە'];
-let tens = ['','','بیست','سی','چل','پەنجا','شەست','حەفتا','هەشتا','نەوە'];
+let numbers = {
+    ones: ['', 'یەک', 'دوو', 'سێ', 'چوار', 'پێنج', 'شەش', 'حەوت', 'هەشت', 'نۆ'],
+    teens: ['دە', 'یانزە', 'دوانزە', 'سیانزە' ,'چواردە' ,'پانزە' ,'شانزە', 'حەڤە', 'هەژدە', 'نۆزدە'],
+    tens: ['','','بیست','سی','چل','پەنجا','شەست','حەفتا','هەشتا','نەوە']
+}
 
-inputHTML.addEventListener('input', () => {
-    outputHTML.innerHTML = "ئەنجام: " + convertToWords(inputHTML.value);
+inputHTML.addEventListener('input', (e) => {
+    outputHTML.innerHTML = "ئەنجام: " + convertToWords(e.target.value);
+    console.log(e);
+});
+
+readBtn.addEventListener('click', ()=> {
+    let number = inputHTML.value;
+    readNumber(number);
 });
 
 function playAudio(number) {
     audio = new Audio(`audio/${number}.m4a`);
     audio.play();
 }
-readBtn.addEventListener('click', ()=> {
-    let number = inputHTML.value;
-    readHundreds(number);
-    function readTens(number) {
-        if (number < 20) { 
-            playAudio(number);
-        } 
-        else if(number > 19) {
-            if(number % 10 != 0) {
-                playAudio(Math.floor(number / 10) * 10);
+function readNumber(number) {
+    if(number < 0) 
+        alert ('پشتگیری ژمارەی نێگەتڤ ناکات.');
+    else if(number.length > 3)
+        alert ('لە 3 ژمارە زیاتر ناخوێنێتەوە.');
+    else 
+        readHundreds(number);
+}
+function readTens(number) {
+    if (number < 20) { 
+        playAudio(number);
+    } 
+    else if(number > 19) {
+        if(number % 10 != 0) {
+            playAudio(Math.floor(number / 10) * 10);
+            audio.addEventListener('ended', ()=> {
+                playAudio('و');
                 audio.addEventListener('ended', ()=> {
-                    playAudio('و');
-                    audio.addEventListener('ended', ()=> {
-                        playAudio(number % 10);
-                    })
+                    playAudio(number % 10);
                 })
-            } else {
-                playAudio(number)   
-            }
-        }
-        else {
-            readHundreds(number);
+            })
+        } else {
+            playAudio(number)   
         }
     }
-     function readHundreds(number) {
-        if(number > 99) {
-            if(number <= 199) {
+}
+function readHundreds(number) {
+    if(number > 99) {
+        if(number <= 199) {
+            playAudio(100);
+            audio.addEventListener('ended', ()=> {
+                if(number % 100 != 0) {
+                    playAudio('و');
+                    audio.addEventListener('ended', () => {
+                        readTens(number % 100);
+                    })
+                }
+            })
+        }
+        else {
+            playAudio(Math.floor(number / 100));
+            audio.addEventListener('ended', ()=> {
                 playAudio(100);
                 audio.addEventListener('ended', ()=> {
                     if(number % 100 != 0) {
@@ -50,30 +73,18 @@ readBtn.addEventListener('click', ()=> {
                         })
                     }
                 })
-            }
-            else {
-                playAudio(Math.floor(number / 100));
-                audio.addEventListener('ended', ()=> {
-                    playAudio(100);
-                    audio.addEventListener('ended', ()=> {
-                        if(number % 100 != 0) {
-                            playAudio('و');
-                            audio.addEventListener('ended', () => {
-                                readTens(number % 100);
-                            })
-                        }
-                    })
-                })
-            }    
-        } else {
-            readTens(number);
-        }
-     }
-});
+            })
+        }    
+    } else {
+        readTens(number);
+    }
+ }
 
 function convertToWords(number) {
     if(number == 0)
         return 'سفر';
+    if(number < 0) 
+        return 'پشتگیری ژمارەی نێگەتڤ ناکات.';
     else if(number.length >= 16)
         return 'لە 15 ژمارە زیاتر ناکات.'
     else 
@@ -81,14 +92,14 @@ function convertToWords(number) {
     
     function convertTens(number) {
         if(number < 10)
-            return ones[number];
+            return numbers.ones[number];
         else if(number >= 10 && number < 20) 
             return teens[number - 10];
         else if(number >= 20) 
             if(number % 10 != 0)
-                return tens[Math.floor(number / 10)] + ' و ' + ones[number % 10];
+                return numbers.tens[Math.floor(number / 10)] + ' و ' + numbers.ones[number % 10];
             else 
-                return tens[Math.floor(number / 10)];
+                return numbers.tens[Math.floor(number / 10)];
         else 
             return '';
     }
