@@ -1,35 +1,33 @@
 let readBtn = document.querySelector('button');
 let audio;
-let inputHTML = document.querySelector('input');
-let outputHTML = document.querySelector('p');
+let inputElement = document.querySelector('input');
+let outputElement = document.querySelector('p');
 let numbers = {
     ones: ['', 'یەک', 'دوو', 'سێ', 'چوار', 'پێنج', 'شەش', 'حەوت', 'هەشت', 'نۆ'],
     teens: ['دە', 'یانزە', 'دوانزە', 'سیانزە' ,'چواردە' ,'پانزە' ,'شانزە', 'حەڤە', 'هەژدە', 'نۆزدە'],
     tens: ['','','بیست','سی','چل','پەنجا','شەست','حەفتا','هەشتا','نەوە']
 }
 
-inputHTML.addEventListener('input', (e) => {
-    outputHTML.innerHTML = "ئەنجام: " + convertToWords(e.target.value);
-    console.log(e);
+inputElement.addEventListener('input', (e) => {
+    outputElement.innerHTML = "ئەنجام: " + convertToWords(e.target.value);
 });
 
 readBtn.addEventListener('click', ()=> {
-    let number = inputHTML.value;
-    readNumber(number);
+    let number = inputElement.value;
+    if(number < 0) 
+        alert ('پشتگیری ژمارەی نێگەتڤ ناکات.');
+    else if(number.length > 3)
+        alert ('لە 3 ژمارە زیاتر ناخوێنێتەوە.');
+    else {
+        readNumber(number);
+    }
 });
 
 function playAudio(number) {
     audio = new Audio(`audio/${number}.m4a`);
     audio.play();
 }
-function readNumber(number) {
-    if(number < 0) 
-        alert ('پشتگیری ژمارەی نێگەتڤ ناکات.');
-    else if(number.length > 3)
-        alert ('لە 3 ژمارە زیاتر ناخوێنێتەوە.');
-    else 
-        readHundreds(number);
-}
+
 function readTens(number) {
     if (number < 20) { 
         playAudio(number);
@@ -48,7 +46,7 @@ function readTens(number) {
         }
     }
 }
-function readHundreds(number) {
+function readNumber(number) {
     if(number > 99) {
         if(number <= 199) {
             playAudio(100);
@@ -84,7 +82,7 @@ function convertToWords(number) {
     if(number == 0)
         return 'سفر';
     if(number < 0) 
-        return 'پشتگیری ژمارەی نێگەتڤ ناکات.';
+        return 'سالب ' + converTrillion(Math.abs(number));
     else if(number.length >= 16)
         return 'لە 15 ژمارە زیاتر ناکات.'
     else 
@@ -101,7 +99,7 @@ function convertToWords(number) {
             else 
                 return numbers.tens[Math.floor(number / 10)];
         else 
-            return '';
+            return undefined;
     }
     function converHundreds(number) {
         if(number > 99)
