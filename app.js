@@ -92,7 +92,7 @@ function convertToWords(number) {
         if(number < 10)
             return numbers.ones[number];
         else if(number >= 10 && number < 20) 
-            return teens[number - 10];
+            return numbers.teens[number - 10];
         else if(number >= 20) 
             if(number % 10 != 0)
                 return numbers.tens[Math.floor(number / 10)] + ' و ' + numbers.ones[number % 10];
