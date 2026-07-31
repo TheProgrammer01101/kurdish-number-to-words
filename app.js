@@ -1,140 +1,124 @@
-let readBtn = document.querySelector('button');
-let audio;
-let inputElement = document.querySelector('input');
-let outputElement = document.querySelector('p');
-let numbers = {
+// ---------- DOM references ----------
+const readBtn = document.querySelector('button');
+const inputElement = document.querySelector('input');
+const outputElement = document.querySelector('p');
+
+// ---------- Vocabulary ----------
+const numbers = {
     ones: ['', 'یەک', 'دوو', 'سێ', 'چوار', 'پێنج', 'شەش', 'حەوت', 'هەشت', 'نۆ'],
-    teens: ['دە', 'یانزە', 'دوانزە', 'سیانزە' ,'چواردە' ,'پانزە' ,'شانزە', 'حەڤە', 'هەژدە', 'نۆزدە'],
-    tens: ['','','بیست','سی','چل','پەنجا','شەست','حەفتا','هەشتا','نەوە']
+    teens: ['دە', 'یانزە', 'دوانزە', 'سیانزە', 'چواردە', 'پانزە', 'شانزە', 'حەڤە', 'هەژدە', 'نۆزدە'],
+    tens: ['', '', 'بیست', 'سی', 'چل', 'پەنجا', 'شەست', 'حەفتا', 'هەشتا', 'نەوە']
+};
+
+// Scale words used above 99, largest first. Driven by data instead of
+// five near-identical functions (converHundreds/Thousands/Million/...).
+const scales = [
+    { value: 1000000000000n, word: 'ترلیۆن' },
+    { value: 1000000000n,    word: 'ملیار'  },
+    { value: 1000000n,       word: 'ملیۆن'  },
+    { value: 1000n,          word: 'هەزار'  },
+    { value: 100n,           word: 'سەد'    },
+];
+
+// ---------- Text conversion (recursive) ----------
+
+function convertBelowHundred(n) {
+    if (n < 10n) return numbers.ones[Number(n)];
+    if (n < 20n) return numbers.teens[Number(n) - 10];
+    const tensPart = numbers.tens[Number(n / 10n)];
+    const onesPart = n % 10n;
+    return onesPart === 0n ? tensPart : `${tensPart} و ${numbers.ones[Number(onesPart)]}`;
+}
+
+// Recursively converts a non-negative BigInt into Kurdish words.
+// Handles any scale in `scales` without needing a separate function per scale.
+function convertMagnitude(n) {
+    if (n < 100n) return convertBelowHundred(n);
+
+    for (const { value, word } of scales) {
+        if (n >= value) {
+            const count = n / value;
+            const remainder = n % value;
+
+            // "یەک سەد" isn't idiomatic for 100-199; omit the leading "یەک".
+            const countWord = count === 1n ? '' : convertMagnitude(count) + ' ';
+            const remainderWord = remainder === 0n ? '' : ' و ' + convertMagnitude(remainder);
+
+            return `${countWord}${word}${remainderWord}`;
+        }
+    }
+}
+
+function convertToWords(rawInput) {
+    const isNegative = rawInput.trim().startsWith('-');
+    const digitsOnly = rawInput.replace('-', '');
+
+    if (digitsOnly === '' || digitsOnly === '0') return 'سفر';
+    if (digitsOnly.length >= 16) return 'لە 15 ژمارە زیاتر ناکات.';
+
+    const words = convertMagnitude(BigInt(digitsOnly));
+    return isNegative ? 'سالب ' + words : words;
 }
 
 inputElement.addEventListener('input', (e) => {
-    outputElement.innerHTML = "ئەنجام: " + convertToWords(e.target.value);
+    outputElement.innerHTML = 'ئەنجام: ' + convertToWords(e.target.value || '0');
 });
 
-readBtn.addEventListener('click', ()=> {
-    let number = inputElement.value;
-    if(number < 0) 
-        alert ('پشتگیری ژمارەی نێگەتڤ ناکات.');
-    else if(number.length > 3)
-        alert ('لە 3 ژمارە زیاتر ناخوێنێتەوە.');
-    else {
-        readNumber(number);
-    }
-});
+// ---------- Audio playback ----------
 
-function playAudio(number) {
-    audio = new Audio(`audio/${number}.m4a`);
-    audio.play();
+// Wraps a single audio file in a Promise that resolves when playback ends,
+// so sequences can be played with a plain loop instead of nested callbacks.
+function playAudio(token) {
+    return new Promise((resolve, reject) => {
+        const audio = new Audio(`audio/${token}.m4a`);
+        audio.addEventListener('ended', () => resolve(), { once: true });
+        audio.addEventListener('error', reject, { once: true });
+        audio.play();
+    });
 }
 
-function readTens(number) {
-    if (number < 20) { 
-        playAudio(number);
-    } 
-    else if(number > 19) {
-        if(number % 10 != 0) {
-            playAudio(Math.floor(number / 10) * 10);
-            audio.addEventListener('ended', ()=> {
-                playAudio('و');
-                audio.addEventListener('ended', ()=> {
-                    playAudio(number % 10);
-                })
-            })
+async function speakSequence(tokens) {
+    for (const token of tokens) {
+        await playAudio(token);
+    }
+}
+
+// Builds the list of audio tokens to play for a number 0-99.
+function buildTensTokens(number) {
+    if (number < 20) return [number];
+    if (number % 10 === 0) return [number];
+    return [Math.floor(number / 10) * 10, 'و', number % 10];
+}
+
+// Builds the list of audio tokens to play for a number 0-999
+// (input is capped at 3 digits by the click handler below).
+function buildTokens(number) {
+    if (number > 99) {
+        const tokens = [];
+        if (number <= 199) {
+            tokens.push(100);
         } else {
-            playAudio(number)   
+            tokens.push(Math.floor(number / 100), 100);
         }
+        if (number % 100 !== 0) {
+            tokens.push('و', ...buildTensTokens(number % 100));
+        }
+        return tokens;
     }
+    return buildTensTokens(number);
 }
-function readNumber(number) {
-    if(number > 99) {
-        if(number <= 199) {
-            playAudio(100);
-            audio.addEventListener('ended', ()=> {
-                if(number % 100 != 0) {
-                    playAudio('و');
-                    audio.addEventListener('ended', () => {
-                        readTens(number % 100);
-                    })
-                }
-            })
-        }
-        else {
-            playAudio(Math.floor(number / 100));
-            audio.addEventListener('ended', ()=> {
-                playAudio(100);
-                audio.addEventListener('ended', ()=> {
-                    if(number % 100 != 0) {
-                        playAudio('و');
-                        audio.addEventListener('ended', () => {
-                            readTens(number % 100);
-                        })
-                    }
-                })
-            })
-        }    
-    } else {
-        readTens(number);
-    }
- }
 
-function convertToWords(number) {
-    if(number == 0)
-        return 'سفر';
-    if(number < 0) 
-        return 'سالب ' + converTrillion(Math.abs(number));
-    else if(number.length >= 16)
-        return 'لە 15 ژمارە زیاتر ناکات.'
-    else 
-        return converTrillion(number);
-    
-    function convertTens(number) {
-        if(number < 10)
-            return numbers.ones[number];
-        else if(number >= 10 && number < 20) 
-            return numbers.teens[number - 10];
-        else if(number >= 20) 
-            if(number % 10 != 0)
-                return numbers.tens[Math.floor(number / 10)] + ' و ' + numbers.ones[number % 10];
-            else 
-                return numbers.tens[Math.floor(number / 10)];
-        else 
-            return undefined;
+readBtn.addEventListener('click', () => {
+    const raw = inputElement.value;
+    const number = Number(raw);
+
+    if (number < 0) {
+        alert('پشتگیری ژمارەی نێگەتڤ ناکات.');
+    } else if (raw.length > 3) {
+        alert('لە 3 ژمارە زیاتر ناخوێنێتەوە.');
+    } else {
+        speakSequence(buildTokens(number)).catch((err) => {
+            console.error('Audio playback failed:', err);
+        });
     }
-    function converHundreds(number) {
-        if(number > 99)
-            if(number < 200)
-                return 'سەد' + (number % 100 == 0 ? '' : ' و ') + convertTens(number % 100);
-            else
-                return convertTens(Math.floor(number / 100)) + ' سەد ' + (number % 100 == 0 ? '' : ' و ') + convertTens((number % 100));
-        else 
-            return convertTens(number);
-    }
-    function converThousands(number) {
-        if(number > 999)
-            if(number < 2000)
-                return 'هەزار' + (number % 1000 == 0 ? '' : ' و ') + converHundreds(number % 1000);
-            else
-                return converHundreds(Math.floor(number / 1000)) + ' هەزار ' + (number % 1000 == 0 ? '' : ' و ') + converHundreds((number % 1000));
-        else 
-            return converHundreds(number);
-    }
-    function converMillion(number) {
-        if(number > 999999)
-            return converThousands(Math.floor(number / 1000000)) + ' ملیۆن ' + (number % 1000000 == 0 ? '' : ' و ') + converThousands((number % 1000000));
-        else 
-            return converThousands(number);
-    }
-    function converBillion(number) {
-        if(number > 999999999)
-            return converMillion(Math.floor(number / 1000000000)) + ' ملیار ' + (number % 1000000000 == 0 ? '' : ' و ') + converMillion((number % 1000000000));
-        else 
-            return converMillion(number);
-    }
-    function converTrillion(number) {
-        if(number > 999999999999)
-            return converBillion(Math.floor(number / 1000000000000)) + ' ترلیۆن ' + (number % 1000000000000 == 0 ? '' : ' و ') + converBillion((number % 1000000000000));
-        else 
-            return converBillion(number);
-    }
-}
+});
